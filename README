@@ -24,3 +24,13 @@ We have included a sample log extract and the interface you are required to impl
 We expect your submission to implement the above functionality with evidence that the features you have implemented work
 correctly. We suggest spending 1-1.5 hours on the test. Your solution will be judged on a number of criteria
 pertinent to good software development practice. Please feel free to add a README with any further comments you have.
+
+**Build and run the application** (from the basedir - for example - where the pom.xml exists)
+
+- To build the application
+```mvn clean install ```
+
+**Few caveats**
+
++ Used Java Util logger for simplicity
+

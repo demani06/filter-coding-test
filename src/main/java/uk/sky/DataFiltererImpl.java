@@ -3,25 +3,29 @@ package uk.sky;
 import uk.sky.model.LogRecord;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import static uk.sky.util.Constants.EITHER_READER_OR_COUNTRY_IS_NULL_ERROR_MESSAGE;
-import static uk.sky.util.Constants.READER_NULL_ERROR_MESSAGE;
+import static uk.sky.util.Constants.*;
 
 public class DataFiltererImpl implements DataFilterer<LogRecord> {
 
+    private final static Logger LOG = Logger.getLogger(DataFiltererImpl.class.getName());
 
     @Override
     public Collection<LogRecord> filterByCountry(final Reader source, final String country) {
 
+        LOG.info(String.format("Filtering by Country country:%s", country));
+
         validateCountryAndReaderInputs(source, country);
 
-        //TODO validate input country, input source
         final List<LogRecord> logRecordsList = getLogRecordsList(source);
 
         return logRecordsList
@@ -34,6 +38,8 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
 
     @Override
     public Collection<LogRecord> filterByCountryWithResponseTimeAboveLimit(final Reader source,final String country,final long limit) {
+
+        LOG.info(String.format("Filtering by CountryWithResponseTimeAboveLimit with country:%s and limit:%s", country, limit));
 
         validateCountryAndReaderInputs(source, country);
 
@@ -49,6 +55,8 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
     @Override
     public Collection<LogRecord> filterByResponseTimeAboveAverage(final Reader source) {
 
+        LOG.info("Filtering by ResponseTimeAboveAverage");
+
         if(Objects.isNull(source)){
             throw new IllegalArgumentException(READER_NULL_ERROR_MESSAGE);
         }
@@ -58,8 +66,8 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
         final double average = logRecordsList
                 .stream()
                 .mapToLong(LogRecord::getResponseTime)
-                .average().getAsDouble();
-
+                .average()
+                .orElse(Double.NaN);
 
         return logRecordsList
                 .stream()
@@ -70,9 +78,10 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
 
 
     private List<LogRecord> getLogRecordsList(Reader source){
-        FileReader fileReader = (FileReader) source;
+        LOG.info("Getting Log Records from source reader");
+
         List<LogRecord> logRecords = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(fileReader)) {
+        try (BufferedReader br = new BufferedReader(source)) {
 
             logRecords = br.lines()
                     .skip(1) //Skip the headers
@@ -80,7 +89,7 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
                     .collect(Collectors.toList());
 
         } catch (IOException e) {
-            e.printStackTrace();
+            LOG.severe(String.format("Problem with reading file, exception : %s", e));
         }
 
         return logRecords;
@@ -88,11 +97,10 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
 
     private LogRecord parseLineAndGetLogRecord(String line) {
 
-        final String[] logRecordStringArray = line.split(",");
+        final String[] logRecordStringArray = line.split(COMMA_DELIMITER);
 
         LogRecord logRecord = new LogRecord();
 
-       //TODO handle if not able to parse
         logRecord.setRequestTimeStamp(Instant.ofEpochSecond(Long.parseLong(logRecordStringArray[0])));
         logRecord.setCountryCode(logRecordStringArray[1]);
         logRecord.setResponseTime(Long.parseLong(logRecordStringArray[2]));
@@ -101,6 +109,9 @@ public class DataFiltererImpl implements DataFilterer<LogRecord> {
     }
 
     private void validateCountryAndReaderInputs(Reader source, String country) {
+
+        LOG.info("Validating country and Reader inputs if null");
+
         if(Objects.isNull(source) || Objects.isNull(country)){
             throw new IllegalArgumentException(EITHER_READER_OR_COUNTRY_IS_NULL_ERROR_MESSAGE);
         }

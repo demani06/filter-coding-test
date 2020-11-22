@@ -20,13 +20,15 @@ class DataFiltererTest {
 
     private DataFilterer<LogRecord> dataFilterer;
     private Reader reader = null;
+    private Reader onlyHeaderFileReader = null;
 
     @BeforeEach
     void setUp() throws FileNotFoundException {
         reader = new FileReader("src/test/resources/sample-extract");
+        onlyHeaderFileReader = new FileReader("src/test/resources/sample-extract-only-header");
         dataFilterer = new DataFiltererImpl();
     }
-    @ParameterizedTest(name = "filter country code for ''countrycode:{0} and expectedMatchedResulsts:{1}''")
+    @ParameterizedTest(name = "filter country code for ''countrycode:{0} and expectedMatchedResults:{1}''")
     @CsvSource({
             "GB, 1",
             "US, 3",
@@ -49,6 +51,11 @@ class DataFiltererTest {
     }
 
     @Test
+    public void testFilterByCountryWithCountryCodeWhenFileWithOnlyHeadersSent() {
+        assertEquals(0, dataFilterer.filterByCountry(onlyHeaderFileReader,"US").size());
+    }
+
+    @Test
     public void testFilterByCountryWhenReaderNull() {
 
         Throwable exceptionThatWasThrown = assertThrows(IllegalArgumentException.class,
@@ -63,17 +70,24 @@ class DataFiltererTest {
     }
 
     @Test
-    public void testFilterByCountryWithResponseTimeAboveLimit() {
+    public void testFilterByCountryWithResponseTimeAboveLimitForPositiveScenario1() {
         final Collection<LogRecord> logRecords = dataFilterer.filterByCountryWithResponseTimeAboveLimit(reader, "US", 500);
 
         assertEquals(3, logRecords.size());
     }
 
     @Test
-    public void testFilterByCountryWithResponseTimeAboveLimit2() {
+    public void testFilterByCountryWithResponseTimeAboveLimitForPositiveScenario2() {
         final Collection<LogRecord> logRecords = dataFilterer.filterByCountryWithResponseTimeAboveLimit(reader, "US", 700);
 
         assertEquals(2, logRecords.size());
+    }
+
+    @Test
+    public void testFilterByCountryWithResponseTimeAboveLimitWhenFileReaderWithEmptyLinesSent() {
+        final Collection<LogRecord> logRecords = dataFilterer.filterByCountryWithResponseTimeAboveLimit(onlyHeaderFileReader, "US", 500);
+
+        assertEquals(0, logRecords.size());
     }
 
     @Test
@@ -112,5 +126,11 @@ class DataFiltererTest {
                 () -> dataFilterer.filterByResponseTimeAboveAverage(null));
         assertEquals(exceptionThatWasThrown.getMessage(), READER_NULL_ERROR_MESSAGE);
 
+    }
+
+    @Test
+    public void testFilterByResponseTimeAboveAverageWhenReaderWithOnlyHeaderSent() {
+        final Collection<LogRecord> logRecords = dataFilterer.filterByResponseTimeAboveAverage(onlyHeaderFileReader);
+        assertEquals(0, logRecords.size());
     }
 }
